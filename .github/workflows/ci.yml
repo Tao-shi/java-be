@@ -1,0 +1,45 @@
+name: CI
+
+# Build and test on every push and pull request to main.
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    name: Build & test (Java ${{ matrix.java }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # pom targets Java 17 bytecode; verify it builds on the target (17)
+        # and on the version used locally (21).
+        java: [ '17', '21' ]
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ matrix.java }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+          cache: maven
+
+      # Tests run under the default 'dev' profile, which uses in-memory H2 —
+      # no external database is needed on the runner.
+      - name: Build and test
+        run: mvn -B --no-transfer-progress verify
+
+      # Publish the runnable jar built on Java 21 for download from the run page.
+      - name: Upload jar
+        if: matrix.java == '21'
+        uses: actions/upload-artifact@v4
+        with:
+          name: java-be-jar
+          path: target/*.jar
+          if-no-files-found: error

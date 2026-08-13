@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(java -version)",
+      "Bash(mvn -version)",
+      "Bash(curl -s -X POST localhost:9090/api/users -H 'Content-Type: application/json' -d '{\"username\":\"jdoe\",\"email\":\"jdoe@example.com\",\"fullName\":\"Jane Doe\",\"role\":\"ADMIN\",\"password\":\"s3cret\"}' -w '\\\\n-> %{http_code}\\\\n')",
+      "Bash(curl -s localhost:9090/api/users -w '\\\\n-> %{http_code}\\\\n')",
+      "Bash(curl -s localhost:9090/api/users/1 -w '\\\\n-> %{http_code}\\\\n')",
+      "Bash(curl -s -X POST localhost:9090/api/users -H 'Content-Type: application/json' -d '{\"username\":\"jdoe\",\"email\":\"other@example.com\",\"fullName\":\"X\",\"role\":\"USER\",\"password\":\"p\"}' -w '\\\\n-> %{http_code}\\\\n')",
+      "Bash(curl -s -X POST localhost:9090/api/users -H 'Content-Type: application/json' -d '{\"username\":\"bob\",\"email\":\"not-an-email\",\"fullName\":\"Bob\",\"role\":\"USER\",\"password\":\"\"}' -w '\\\\n-> %{http_code}\\\\n')"
+    ]
+  }
+}

@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <!-- Pull the app name from application.properties so it appears in every log line -->
+    <springProperty scope="context" name="appName" source="spring.application.name" defaultValue="app"/>
+
+    <!-- JSON to the console (stdout) -->
+    <appender name="JSON_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <customFields>{"app":"${appName}"}</customFields>
+        </encoder>
+    </appender>
+
+    <!-- JSON to a rolling file: new file per day or per 10MB, keep 7 days, cap total at 200MB.
+         The appender DEFINITION is gated to non-prod: a RollingFileAppender opens its file
+         as soon as it is defined (even if unreferenced), so defining it in prod would create
+         the file. Wrapping the definition itself keeps prod's filesystem untouched. -->
+    <springProfile name="!prod">
+        <appender name="JSON_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+            <file>logs/java-be.json</file>
+            <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+                <fileNamePattern>logs/java-be-%d{yyyy-MM-dd}.%i.json</fileNamePattern>
+                <maxFileSize>10MB</maxFileSize>
+                <maxHistory>7</maxHistory>
+                <totalSizeCap>200MB</totalSizeCap>
+            </rollingPolicy>
+            <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+                <customFields>{"app":"${appName}"}</customFields>
+            </encoder>
+        </appender>
+    </springProfile>
+
+    <!-- ============================================================
+         PER-CLASS / PER-PACKAGE LOGGERS
+         ============================================================ -->
+
+    <!-- (1) LEVEL-ONLY logger — the common case.
+         Everything logged by ProductController is emitted at DEBUG, while the
+         rest of the app stays at the root INFO level. additivity defaults to
+         true, so these events STILL flow up to the root's appenders (JSON
+         console + file) — we only changed the level, not the destination. -->
+    <logger name="com.example.javabe.product.ProductController" level="TRACE"/>
+    <logger name="com.example.javabe.user.UserController" level="TRACE"/>
+
+    <!-- (2) ROUTING logger (advanced) — send one package to its OWN file.
+         additivity="false" stops these events from also going to the root
+         appenders, so product logs land ONLY in the refs listed below.
+         Uncomment the appender AND the logger together to use it.
+
+    <appender name="PRODUCT_FILE" class="ch.qos.logback.core.FileAppender">
+        <file>logs/products.json</file>
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <customFields>{"app":"${appName}","stream":"products"}</customFields>
+        </encoder>
+    </appender>
+
+    <logger name="com.example.javabe.product" level="DEBUG" additivity="false">
+        <appender-ref ref="JSON_CONSOLE"/>
+        <appender-ref ref="PRODUCT_FILE"/>
+    </logger>
+    -->
+
+    <!-- Root level stays INFO; the logging.level.* entries in application.properties
+         are still applied by Spring Boot on top of this config. -->
+    <root level="INFO">
+        <appender-ref ref="JSON_CONSOLE"/>
+        <!-- File logging only outside prod. In a container/pod (prod) we log JSON to
+             stdout only, so there are no filesystem writes to trip up a non-root user
+             or a readOnlyRootFilesystem — the platform collects stdout instead. -->
+        <!-- <springProfile name="!prod"> -->
+            <!-- <appender-ref ref="JSON_FILE"/> -->
+        <!-- </springProfile> -->
+    </root>
+
+</configuration>
