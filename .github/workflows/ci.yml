@@ -79,7 +79,7 @@ jobs:
       - name: SonarCloud analysis
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          PROJECT_KEY: ${{ vars.APPLICATION_NAME }}
+          SONAR_PROJECT_KEY: ${{ vars.APPLICATION_NAME }}
         run: >
           mvn -B --no-transfer-progress verify
           org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
