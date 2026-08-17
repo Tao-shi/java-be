@@ -107,7 +107,8 @@ jobs:
         with:
           # Only fail the job on high/critical issues; lower-severity ones are
           # still reported. Drop --severity-threshold to fail on anything.
-          args: --severity-threshold=high --sarif-file-output=snyk.sarif 
+          args: --severity-threshold=high --sarif-file-output=snyk.sarif
+          command: iac
       - uses: actions/upload-artifact@v7
         if: always()
         with:
