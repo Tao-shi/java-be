@@ -111,7 +111,7 @@ jobs:
       # To make it report-only instead, add `continue-on-error: true` here.
       # Drop --severity-threshold to fail on issues of any severity.
       - name: Snyk dependency scan (SCA)
-        run: snyk test --severity-threshold=high --sarif-file-output=snyk.sarif --org={{ vars.SNYK_ORG_ID }}
+        run: snyk test --severity-threshold=high --sarif-file-output=snyk.sarif --org=${{ vars.SNYK_ORG_ID }}
 
       # Optional extras the CLI way unlocks — uncomment as needed:
       # - name: Snyk code scan (SAST)   # requires Snyk Code enabled in the org
