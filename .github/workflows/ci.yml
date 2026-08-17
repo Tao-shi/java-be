@@ -117,6 +117,7 @@ jobs:
       # - name: Snyk code scan (SAST)   # requires Snyk Code enabled in the org
       #   run: snyk code test --severity-threshold=high
       - name: Snyk monitor            # posts a snapshot to the Snyk dashboard
+        if: always()
         run: snyk monitor
 
       - name: Upload SARIF artifact
