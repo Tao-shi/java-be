@@ -88,29 +88,61 @@ jobs:
           -Dsonar.projectKey=${{ vars.APPLICATION_NAME }}
           -Dsonar.branch.name=main
 
+  # --- CLI way (active): run the official Snyk image directly ----------------
+  # Using the image as a container job gives full control over which commands
+  # run (test / code / monitor / iac). SNYK_TOKEN in the env authenticates every
+  # command, so no `snyk auth` step is needed. Snyk resolves dependencies from
+  # pom.xml directly (needs the source, not the jar); the image ships JDK 21 + Maven.
   snyk:
     name: Snyk scan
     needs: build
     runs-on: ubuntu-latest
+    container:
+      # Pin by digest (snyk/snyk@sha256:...) for reproducible, supply-chain-safe runs.
+      image: snyk/snyk:maven-3-jdk-21
+    env:
+      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
     steps:
       - name: Check out code
         uses: actions/checkout@v7
 
-      # Snyk resolves dependencies from pom.xml directly, so it needs the source
-      # (not the built jar). The action image ships its own JDK 21 + Maven.
-      - name: Run Snyk dependency scan
-        uses: snyk/actions/maven-3-jdk-21@master
-        # continue-on-error: true
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        with:
-          # Only fail the job on high/critical issues; lower-severity ones are
-          # still reported. Drop --severity-threshold to fail on anything.
-          args: --severity-threshold=high --sarif-file-output=snyk.sarif
-          # command: iac
-      - uses: actions/upload-artifact@v7
+      # Dependency (SCA) scan. This fails the job on high/critical findings.
+      # To make it report-only instead, add `continue-on-error: true` here.
+      # Drop --severity-threshold to fail on issues of any severity.
+      - name: Snyk dependency scan (SCA)
+        run: snyk test --severity-threshold=high --sarif-file-output=snyk.sarif --org={{ var.SNYK_ORG_ID }}
+
+      # Optional extras the CLI way unlocks — uncomment as needed:
+      # - name: Snyk code scan (SAST)   # requires Snyk Code enabled in the org
+      #   run: snyk code test --severity-threshold=high
+      - name: Snyk monitor            # posts a snapshot to the Snyk dashboard
+        run: snyk monitor
+
+      - name: Upload SARIF artifact
         if: always()
+        uses: actions/upload-artifact@v7
         with:
           name: snyk-sarif
           path: snyk.sarif
+
+  # --- Actions way (previous approach, kept for reference) -------------------
+  # snyk:
+  #   name: Snyk scan
+  #   needs: build
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Check out code
+  #       uses: actions/checkout@v7
+  #     - name: Run Snyk dependency scan
+  #       uses: snyk/actions/maven-3-jdk-21@master
+  #       # continue-on-error: true   # make the scan report-only
+  #       env:
+  #         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+  #       with:
+  #         args: --severity-threshold=high --sarif-file-output=snyk.sarif
+  #     - uses: actions/upload-artifact@v7
+  #       if: always()
+  #       with:
+  #         name: snyk-sarif
+  #         path: snyk.sarif
