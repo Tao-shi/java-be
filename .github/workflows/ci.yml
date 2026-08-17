@@ -101,14 +101,14 @@ jobs:
       # (not the built jar). The action image ships its own JDK 21 + Maven.
       - name: Run Snyk dependency scan
         uses: snyk/actions/maven-3-jdk-21@master
-        continue-on-error: true
+        # continue-on-error: true
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
           # Only fail the job on high/critical issues; lower-severity ones are
           # still reported. Drop --severity-threshold to fail on anything.
           args: --severity-threshold=high --sarif-file-output=snyk.sarif
-          command: iac
+          # command: iac
       - uses: actions/upload-artifact@v7
         if: always()
         with:
