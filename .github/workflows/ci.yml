@@ -86,6 +86,7 @@ jobs:
           -Dsonar.host.url=https://sonarcloud.io
           -Dsonar.organization=${{ vars.SONAR_ORGANIZATION }}
           -Dsonar.projectKey=${{ vars.APPLICATION_NAME }}
+          -Dsonar.branch.name=main
 
   # veracode:
   #   name: Veracode scan
