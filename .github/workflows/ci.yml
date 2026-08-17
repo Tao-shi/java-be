@@ -53,7 +53,7 @@ jobs:
   #
   #             build
   #            /     \
-  #      sonarcloud   veracode      <- run at the same time
+  #      sonarcloud    snyk        <- run at the same time
   # ---------------------------------------------------------------------------
   sonarcloud:
     name: SonarCloud scan
@@ -88,24 +88,22 @@ jobs:
           -Dsonar.projectKey=${{ vars.APPLICATION_NAME }}
           -Dsonar.branch.name=main
 
-  # veracode:
-  #   name: Veracode scan
-  #   needs: build
-  #   runs-on: ubuntu-latest
+  snyk:
+    name: Snyk scan
+    needs: build
+    runs-on: ubuntu-latest
 
-  #   steps:
-  #     # Reuse the jar from the build job instead of rebuilding.
-  #     - name: Download jar
-  #       uses: actions/download-artifact@v8
-  #       with:
-  #         name: java-be-jar
-  #         path: target
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7
 
-  #     - name: Veracode upload and scan
-  #       uses: veracode/veracode-uploadandscan-action@0.2.11
-  #       with:
-  #         appname: java-be
-  #         version: 'CI ${{ github.run_id }}'
-  #         filepath: target/java-be-0.0.1-SNAPSHOT.jar
-  #         vid: ${{ secrets.VERACODE_API_ID }}
-  #         vkey: ${{ secrets.VERACODE_API_KEY }}
+      # Snyk resolves dependencies from pom.xml directly, so it needs the source
+      # (not the built jar). The action image ships its own JDK 21 + Maven.
+      - name: Run Snyk dependency scan
+        uses: snyk/actions/maven-3-jdk-21@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          # Only fail the job on high/critical issues; lower-severity ones are
+          # still reported. Drop --severity-threshold to fail on anything.
+          args: --severity-threshold=high
