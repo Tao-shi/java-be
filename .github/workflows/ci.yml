@@ -123,7 +123,7 @@ jobs:
       - name: Check Snyk SARIF file exists
         if: always()
         run: ls -l
-        
+
       - name: Upload SARIF artifact
         if: always()
         # uses: actions/upload-artifact@v7
@@ -131,6 +131,7 @@ jobs:
         with:
           name: snyk-sarif
           path: snyk.sarif
+          sarif_file: snyk.sarif
 
   # --- Actions way (previous approach, kept for reference) -------------------
   # snyk:
