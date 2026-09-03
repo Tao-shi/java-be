@@ -124,10 +124,19 @@ jobs:
         if: always()
         run: ls -l
 
-      - name: Upload SARIF artifact
+      - name: Upload SARIF artifact CodeQL way
         if: always()
         # uses: actions/upload-artifact@v7
         uses: github/codeql-action/upload-sarif@v3
+        with:
+          name: snyk-sarif
+          path: snyk.sarif
+          sarif_file: snyk.sarif
+
+      - name: Upload SARIF artifact
+        if: always()
+        uses: actions/upload-artifact@v7
+        # uses: github/codeql-action/upload-sarif@v3
         with:
           name: snyk-sarif
           path: snyk.sarif
