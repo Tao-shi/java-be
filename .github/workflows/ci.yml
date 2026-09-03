@@ -53,7 +53,7 @@ jobs:
   #
   #             build
   #            /     \
-  #      sonarcloud   veracode      <- run at the same time
+  #      sonarcloud    snyk        <- run at the same time
   # ---------------------------------------------------------------------------
   sonarcloud:
     name: SonarCloud scan
@@ -79,32 +79,86 @@ jobs:
       - name: SonarCloud analysis
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          #SONAR_PROJECT_KEY: ${{ vars.APPLICATION_NAME }}
+          SONAR_PROJECT_KEY: ${{ vars.APPLICATION_NAME }}
         run: >
           mvn -B --no-transfer-progress verify
           org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
           -Dsonar.host.url=https://sonarcloud.io
           -Dsonar.organization=${{ vars.SONAR_ORGANIZATION }}
           -Dsonar.projectKey=${{ vars.APPLICATION_NAME }}
+          -Dsonar.branch.name=main
 
-  # veracode:
-  #   name: Veracode scan
+  # --- CLI way (active): run the official Snyk image directly ----------------
+  # Using the image as a container job gives full control over which commands
+  # run (test / code / monitor / iac). SNYK_TOKEN in the env authenticates every
+  # command, so no `snyk auth` step is needed. Snyk resolves dependencies from
+  # pom.xml directly (needs the source, not the jar); the image ships JDK 21 + Maven.
+  snyk:
+    name: Snyk scan
+    needs: build
+    runs-on: ubuntu-latest
+    container:
+      # Pin by digest (snyk/snyk@sha256:...) for reproducible, supply-chain-safe runs.
+      image: snyk/snyk:maven-3-jdk-21
+    env:
+      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7
+
+      # Dependency (SCA) scan. This fails the job on high/critical findings.
+      # To make it report-only instead, add `continue-on-error: true` here.
+      # Drop --severity-threshold to fail on issues of any severity.
+      - name: Snyk dependency scan (SCA)
+        run: snyk test --severity-threshold=high --sarif-file-output=snyk.sarif --org=${{ vars.SNYK_ORG_ID }}
+
+      # Optional extras the CLI way unlocks — uncomment as needed:
+      # - name: Snyk code scan (SAST)   # requires Snyk Code enabled in the org
+      #   run: snyk code test --severity-threshold=high
+      - name: Snyk monitor            # posts a snapshot to the Snyk dashboard
+        if: always()
+        run: snyk monitor
+
+      - name: Check Snyk SARIF file exists
+        if: always()
+        run: ls -l
+
+      - name: Upload SARIF artifact CodeQL way
+        if: always()
+        # uses: actions/upload-artifact@v7
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          name: snyk-sarif
+          path: snyk.sarif
+          sarif_file: snyk.sarif
+
+      - name: Upload SARIF artifact
+        if: always()
+        uses: actions/upload-artifact@v7
+        # uses: github/codeql-action/upload-sarif@v3
+        with:
+          name: snyk-sarif
+          path: snyk.sarif
+          sarif_file: snyk.sarif
+
+  # --- Actions way (previous approach, kept for reference) -------------------
+  # snyk:
+  #   name: Snyk scan
   #   needs: build
   #   runs-on: ubuntu-latest
-
   #   steps:
-  #     # Reuse the jar from the build job instead of rebuilding.
-  #     - name: Download jar
-  #       uses: actions/download-artifact@v8
+  #     - name: Check out code
+  #       uses: actions/checkout@v7
+  #     - name: Run Snyk dependency scan
+  #       uses: snyk/actions/maven-3-jdk-21@master
+  #       # continue-on-error: true   # make the scan report-only
+  #       env:
+  #         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
   #       with:
-  #         name: java-be-jar
-  #         path: target
-
-  #     - name: Veracode upload and scan
-  #       uses: veracode/veracode-uploadandscan-action@0.2.11
+  #         args: --severity-threshold=high --sarif-file-output=snyk.sarif
+  #     - uses: actions/upload-artifact@v7
+  #       if: always()
   #       with:
-  #         appname: java-be
-  #         version: 'CI ${{ github.run_id }}'
-  #         filepath: target/java-be-0.0.1-SNAPSHOT.jar
-  #         vid: ${{ secrets.VERACODE_API_ID }}
-  #         vkey: ${{ secrets.VERACODE_API_KEY }}
+  #         name: snyk-sarif
+  #         path: snyk.sarif
