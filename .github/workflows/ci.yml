@@ -166,29 +166,29 @@ jobs:
 
   # --- Secret scanning: Gitleaks (CLI/Docker; the action needs a paid license
   # for org repos, the CLI is free). Scans the FULL git history for committed
-  # # secrets and fails the job if any are found. -------------------------------
-  # gitleaks:
-  #   name: Gitleaks secret scan
-  #   needs: build
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Check out code
-  #       uses: actions/checkout@v7
-  #       with:
-  #         # Full history so gitleaks scans every commit, not just the latest.
-  #         fetch-depth: 0
+  # secrets and fails the job if any are found. -------------------------------
+  gitleaks:
+    name: Gitleaks secret scan
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7
+        with:
+          # Full history so gitleaks scans every commit, not just the latest.
+          fetch-depth: 0
 
-  #     # Runs the official image via `docker run` (not a container job) to avoid
-  #     # git "dubious ownership" issues when scanning the mounted workspace.
-  #     # gitleaks exits non-zero if secrets are found -> the job fails.
-  #     - name: Scan git history for secrets
-  #       run: |
-  #         docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:v8.30.1 \
-  #           git /repo --report-format sarif --report-path /repo/gitleaks.sarif --redact -v
+      # Runs the official image via `docker run` (not a container job) to avoid
+      # git "dubious ownership" issues when scanning the mounted workspace.
+      # gitleaks exits non-zero if secrets are found -> the job fails.
+      - name: Scan git history for secrets
+        run: |
+          docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:v8.30.1 \
+            git /repo --report-format sarif --report-path /repo/gitleaks.sarif --redact -v
 
-  #     - name: Upload SARIF artifact
-  #       if: always()
-  #       uses: actions/upload-artifact@v7
-  #       with:
-  #         name: gitleaks-sarif
-  #         path: gitleaks.sarif
+      - name: Upload SARIF artifact
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: gitleaks-sarif
+          path: gitleaks.sarif
