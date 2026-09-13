@@ -213,8 +213,10 @@ jobs:
           |Num of secrets| 50| 
           |-------|----------|
           EOF
+          export PAYLOAD=$(cat pr-comment.md)
           curl --request POST \
             --url "https://github.com{{ github.repository }}/issues/$PR_NUMBER/comments" \
             --header "Authorization: Bearer $GITHUB_TOKEN" \
             --header "Accept: application/md" \
-            --data $(cat pr-comment.md)
+            --data ${PAYLOAD}
+            # --data $(cat pr-comment.md)
