@@ -204,7 +204,8 @@ jobs:
         if: always()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.number }}        
+          PR_NUMBER: ${{ github.event.number }}     
+          REPO: ${{ github.repository }}   
         run: |
           cat << EOF > pr-comment.md
           ## Gitleaks Secret Scan Results
@@ -215,7 +216,7 @@ jobs:
           EOF
           export PAYLOAD=$(cat pr-comment.md)
           curl --request POST \
-            --url "https://github.com{{ github.repository }}/issues/$PR_NUMBER/comments" \
+            --url "https://github.com/$REPO/issues/$PR_NUMBER/comments" \
             --header "Authorization: Bearer $GITHUB_TOKEN" \
             --header "Accept: application/md" \
             --data ${PAYLOAD}
