@@ -171,6 +171,10 @@ jobs:
     name: Gitleaks secret scan
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      contents: read           # checkout
+      pull-requests: write     # post the PR comment
+      security-events: write   # upload SARIF to code scanning
     steps:
       - name: Check out code
         uses: actions/checkout@v7
@@ -200,24 +204,32 @@ jobs:
           sarif_file: gitleaks.sarif
           category: my-static-analysis-tool
 
-      - name: Writing to the Pull Request
-        if: always()
+      # Post the scan summary as a PR comment. Only runs on pull_request events
+      # (on a push there is no PR to comment on). The gh CLI is preinstalled on
+      # the runner and reads GH_TOKEN automatically.
+      - name: Comment on the Pull Request
+        if: github.event_name == 'pull_request'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.number }}     
-          REPO: ${{ github.repository }}   
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          cat << EOF > pr-comment.md
+          cat << 'EOF' > pr-comment.md
           ## Gitleaks Secret Scan Results
           The Gitleaks secret scan has completed. Please review the results below.
-          |-------|----------|
-          |Num of secrets| 50| 
-          |-------|----------|
+
+          | Metric         | Value |
+          |----------------|-------|
+          | Num of secrets | 50    |
           EOF
-          export PAYLOAD=$(cat pr-comment.md)
-          curl --request POST \
-            --url "https://github.com/$REPO/issues/$PR_NUMBER/comments" \
-            --header "Authorization: Bearer $GITHUB_TOKEN" \
-            --header "Accept: application/md" \
-            --data ${PAYLOAD}
-            # --data $(cat pr-comment.md)
+
+          gh pr comment "$PR_NUMBER" --body-file pr-comment.md
+
+      # --- One-liner alternative (does the same thing) --------------------------
+      # gh infers the PR from the branch, so you don't even need PR_NUMBER. It
+      # only works when the workflow is triggered by a pull_request event.
+      #
+      # - name: Comment on the Pull Request (one-liner)
+      #   if: github.event_name == 'pull_request'
+      #   env:
+      #     GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #   run: gh pr comment "${{ github.event.pull_request.number }}" --body-file  "Gitleaks scan complete — see the run for details."
