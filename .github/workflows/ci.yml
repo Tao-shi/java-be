@@ -199,3 +199,22 @@ jobs:
         with:
           sarif_file: gitleaks.sarif
           category: my-static-analysis-tool
+
+      - name: Writing to the Pull Request
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.number }}        
+        run: |
+          cat << EOF > pr-comment.md
+          ## Gitleaks Secret Scan Results
+          The Gitleaks secret scan has completed. Please review the results below.
+          |-------|----------|
+          |Num of secrets| 50| 
+          |-------|----------|
+          EOF
+          curl --request POST \
+            --url "https://github.com{{ github.repository }}/issues/$PR_NUMBER/comments" \
+            --header "Authorization: Bearer $GITHUB_TOKEN" \
+            --header "Accept: application/md" \
+            --data $(cat pr-comment.md)
