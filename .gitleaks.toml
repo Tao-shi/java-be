@@ -1,0 +1,31 @@
+# Gitleaks configuration for java-be.
+#
+# `extend.useDefault = true` keeps all ~150 built-in rules (AWS/GitHub/Stripe/
+# private-key/etc.) AND adds the custom rule below, which catches config-style
+# credential assignments that the conservative default rules miss — e.g.
+# hand-written values in *.properties that don't match a known provider format
+# or clear the generic-api-key entropy threshold.
+
+title = "java-be gitleaks config"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "config-credential-assignment"
+description = "Credential assigned to a *.password / *.secret / *.api-key / *.token property"
+# key name ending in a credential word, then = , then a value of 5+ non-space chars.
+# Group 1 (the value) is treated as the secret so the allowlist can vet it.
+regex = '''(?i)(?:password|passwd|secret|api[._-]?key|apikey|access[._-]?key|token)\s*[=:]\s*(\S{5,})'''
+secretGroup = 1
+keywords = ["password", "passwd", "secret", "apikey", "api.key", "api_key", "api-key", "accesskey", "access.key", "token"]
+tags = ["config", "credential"]
+
+  # Values that are NOT real secrets — don't fail the build on these.
+  [rules.allowlist]
+  regexTarget = "secret"
+  regexes = [
+    '''\$\{[^}]+\}''',                       # env / property references: ${DB_PASSWORD}
+    '''(?i)^(changeme|change-me|placeholder|example|dummy|test|todo|none|null|xxx+)$''',
+    '''(?i)^your[-_].*''',                    # your-password, your_token, ...
+  ]
