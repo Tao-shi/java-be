@@ -198,4 +198,4 @@ jobs:
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: gitleaks.sarif
-          # category: my-static-analysis-tool
+          category: my-static-analysis-tool
