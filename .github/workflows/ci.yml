@@ -208,7 +208,8 @@ jobs:
       # (on a push there is no PR to comment on). The gh CLI is preinstalled on
       # the runner and reads GH_TOKEN automatically.
       - name: Comment on the Pull Request
-        if: github.event_name == 'pull_request'
+        # if: github.event_name == 'pull_request'
+        if: always()  # run even if the scan fails (so the comment is posted)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
